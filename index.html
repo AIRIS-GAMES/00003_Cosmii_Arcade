@@ -66,6 +66,7 @@
 @keyframes devShake{ 0%,100%{transform:translateX(0);} 25%{transform:translateX(-5px);} 75%{transform:translateX(5px);} }
 .charselect-card.dev-shake{ animation:devShake .28s ease; }
 .select-title{
+  font-size:clamp(1.1rem,5vw,1.7rem); white-space:nowrap; min-width:0;
   background:linear-gradient(90deg,#ff5a6e,#ffb14d,#ffe14d,#7fd85a,#5ab8ff,#b06ae8);
   -webkit-background-clip:text; background-clip:text;
   color:transparent !important; -webkit-text-fill-color:transparent;
@@ -283,6 +284,10 @@
 .charselect-card.jlocked{ filter:grayscale(.7) brightness(.9); }
 .char-lock{ position:absolute; top:8%; right:8%; font-size:1.5rem; z-index:3; filter:drop-shadow(0 1px 2px rgba(0,0,0,.4)); }
 .charselect-card.jlocked .charselect-tag{ white-space:nowrap; font-size:.58rem; }
+.select-header{ display:flex; align-items:center; justify-content:space-between; gap:.4rem; width:94%; margin:0 auto; }
+#selectWallet{ display:flex; gap:.5rem; flex-shrink:0; }
+#selectWallet .sw-item{ display:inline-flex; align-items:center; gap:.15rem; background:rgba(255,255,255,.8); border:2px solid #141414; border-radius:999px; padding:.1rem .45rem; font-weight:900; font-size:.82rem; color:#333; }
+#selectWallet .sw-item img{ width:1.05em; height:1.05em; object-fit:contain; }
 </style>
 <style>
 :root{
@@ -566,12 +571,19 @@ button{font-family:inherit; border:none; background:none; color:inherit; cursor:
 #playfieldWrap{
   position:relative; flex:1; width:100%; margin:0;
   display:flex; min-height:0;
+  touch-action:none; -ms-touch-action:none; user-select:none; -webkit-user-select:none;
 }
 #playfield{
   position:relative; flex:1; width:100%; border-radius:0;
   background:rgba(255,255,255,0.72); overflow:hidden; min-height:120px;
   display:flex; flex-direction:column; align-items:center; justify-content:center; gap:.7rem; padding:.55rem;
+  touch-action:none; -ms-touch-action:none; user-select:none; -webkit-user-select:none; -webkit-tap-highlight-color:transparent;
 }
+/* タッチ感リップル */
+.tap-ripple{ position:absolute; width:52px; height:52px; margin:-26px 0 0 -26px; border-radius:50%;
+  border:3px solid rgba(255,255,255,.9); box-shadow:0 0 10px rgba(255,255,255,.7), inset 0 0 8px rgba(255,255,255,.5);
+  pointer-events:none; z-index:999; animation:tapRipple .4s ease-out forwards; }
+@keyframes tapRipple{ 0%{ transform:scale(.25); opacity:.95; } 100%{ transform:scale(1.4); opacity:0; } }
 
 /* ===== お題カード (ラウンド開始前、約1.8秒) ===== */
 #callCard{
@@ -1289,8 +1301,12 @@ button{font-family:inherit; border:none; background:none; color:inherit; cursor:
   <div id="screen-select" class="screen">
     <div class="select-header">
       <h2 class="select-title">Cosmii Arcade</h2>
+      <div id="selectWallet">
+        <span class="sw-item"><img id="walletCoinImg" alt="coin"><b id="walletCoin">0</b></span>
+        <span class="sw-item"><img id="walletMetImg" alt="meteor"><b id="walletMet">0</b></span>
+      </div>
     </div>
-    <div id="buildTag">v29 WHEEL 0711-0626</div>
+    <div id="buildTag">v42 UI 0711-0940</div>
     <div class="menu-list">
       <button class="menu-item" id="btnNormal">
         <span class="menu-num">①</span>
@@ -2366,8 +2382,8 @@ function charForConfig(cfg){
   if(BLUE_GAME_TYPES.has(cfg.type)) return CHARACTERS[1]; // 青（ステラ）のゲーム
   if(GREEN_GAME_TYPES.has(cfg.type)) return CHARACTERS[2]; // 緑（スプラウト）のゲーム
   if(!_charForTypeCache[cfg.type]){
-    // 緑には専用ゲーム以外は入れない（のこりは赤・桃・紫にふりわけ）
-    const pool=[0,3,4];
+    // 緑は専用ゲームのみ。ピンク(ココ)・紫(デヴィ)は開発中なので出さず、赤・青にふりわけ
+    const pool=[0,1];
     _charForTypeCache[cfg.type]=CHARACTERS[pool[_hashStr(cfg.type)%pool.length]];
   }
   return _charForTypeCache[cfg.type];
@@ -2414,9 +2430,25 @@ function updatePadForConfig(cfg){
   resetPadState();
 }
 
+(function wireTapFeedback(){
+  const pf=document.getElementById('playfield');
+  if(!pf) return;
+  pf.addEventListener('pointerdown', function(e){
+    // ゲーム中のみ・UIボタン以外
+    const r=pf.getBoundingClientRect();
+    const x=e.clientX-r.left, y=e.clientY-r.top;
+    if(x<0||y<0||x>r.width||y>r.height) return;
+    const rip=document.createElement('div');
+    rip.className='tap-ripple';
+    rip.style.left=x+'px'; rip.style.top=y+'px';
+    pf.appendChild(rip);
+    setTimeout(function(){ rip.remove(); }, 420);
+  }, true);
+})();
+
 (function wireJoystick(){
   let dragging=false;
-  function maxRadius(){ return joystickBaseEl.clientWidth*0.46; }
+  function maxRadius(){ return joystickBaseEl.clientWidth*0.40; }
   function applyDir(dx,dy){
     const mr=maxRadius()||1;
     let nx=dx/mr, ny=dy/mr;
@@ -2565,7 +2597,7 @@ function getACtx(){
   return _actx;
 }
 
-function setBgmVolume(v){
+window.setBgmVolume=function(v){
   _bgmVol=v;
   if(_bgmGain) _bgmGain.gain.setTargetAtTime(v, getACtx().currentTime, 0.05);
 }
@@ -3600,13 +3632,13 @@ function mechLensFind(ctx,opts,duration,field){
   function buildLayer(parent, vivid){
     deco.forEach(d=>{
       const s=el('div','',d.e);
-      s.style.cssText='position:absolute;opacity:0;left:'+d.x+'%;top:'+d.y+'%;transform:translate(-50%,-50%);font-size:1.26rem;pointer-events:none;'+(vivid?'':'opacity:.09;filter:grayscale(1);');
+      s.style.cssText='position:absolute;opacity:0;left:'+d.x+'%;top:'+d.y+'%;transform:translate(-50%,-50%);font-size:1.26rem;pointer-events:none;'+(vivid?'':'opacity:0;');
       parent.appendChild(s);
     });
     return spots.map(p=>{
       const img=document.createElement('img');
       img.src=CHARACTERS[p.c].img; img.alt=''; img.draggable=false;
-      img.style.cssText='position:absolute;left:'+p.x+'%;top:'+p.y+'%;width:14%;opacity:0;aspect-ratio:1;object-fit:contain;transform:translate(-50%,-50%);pointer-events:none;'+(vivid?'':'opacity:.05;filter:grayscale(1);');
+      img.style.cssText='position:absolute;left:'+p.x+'%;top:'+p.y+'%;width:14%;opacity:0;aspect-ratio:1;object-fit:contain;transform:translate(-50%,-50%);pointer-events:none;'+(vivid?'':'opacity:0;');
       parent.appendChild(img);
       return img;
     });
@@ -3734,6 +3766,39 @@ function gfxWrap(field,hintJa,hintEn){
   hint.style.cssText='position:absolute;top:2.5%;left:5%;color:#1f9a4d;font-weight:900;font-size:.7rem;z-index:9;text-shadow:-1px -1px 0 #fff,1px -1px 0 #fff,-1px 1px 0 #fff,1px 1px 0 #fff;';
   hint.textContent=LANG==='en'?hintEn:hintJa;
   wf.appendChild(hint);
+  // ===== 緑ゲーム共通：フィールドにコスモコインをランダム配置（タッチで回収）=====
+  (function fieldCoins(){
+    const coins=[];
+    function addSilentCoin(){ COINS++; try{ localStorage.setItem('cosmii_coins',String(COINS)); }catch(e){} if(typeof updateCoinUi==='function') updateCoinUi(); }
+    function spawn(c){
+      c.x=8+Math.random()*84; c.y=26+Math.random()*58; c.got=false;
+      c.el.style.left=c.x+'%'; c.el.style.top=c.y+'%'; c.el.style.display='block';
+    }
+    for(let i=0;i<6;i++){
+      const im=document.createElement('img');
+      im.src=IMG_COIN; im.alt=''; im.draggable=false;
+      im.style.cssText='position:absolute;width:8.5%;aspect-ratio:1;object-fit:contain;transform:translate(-50%,-50%);z-index:4;pointer-events:none;animation:ccTwinkle 1.4s ease-in-out infinite;filter:drop-shadow(0 1px 2px rgba(0,0,0,.25));';
+      wf.appendChild(im);
+      const c={el:im}; coins.push(c); spawn(c);
+    }
+    function tryCollect(clientX,clientY){
+      const r=wf.getBoundingClientRect(); if(!r.width) return;
+      const px=(clientX-r.left)/r.width*100, py=(clientY-r.top)/r.height*100;
+      coins.forEach(c=>{
+        if(c.got) return;
+        if(Math.abs(c.x-px)<7 && Math.abs(c.y-py)<7){
+          c.got=true; c.el.style.display='none'; addSilentCoin();
+          const fx=document.createElement('div'); fx.textContent='+1';
+          fx.style.cssText='position:absolute;left:'+c.x+'%;top:'+(c.y-4)+'%;transform:translate(-50%,-50%);font-weight:900;color:#e0a020;font-size:1rem;z-index:8;pointer-events:none;text-shadow:0 1px 2px #fff;';
+          wf.appendChild(fx); setTimeout(()=>fx.remove(),500);
+          setTimeout(()=>{ if(!ctxResolvedFlag()) spawn(c); }, 3200);
+        }
+      });
+    }
+    function ctxResolvedFlag(){ return false; }
+    wf.addEventListener('pointerdown', e=>tryCollect(e.clientX,e.clientY), true);
+    wf.addEventListener('pointermove', e=>tryCollect(e.clientX,e.clientY), true);
+  })();
   return wf;
 }
 function gfxHud(wf,side){
@@ -6637,18 +6702,19 @@ function mechBounceKeep(ctx,opts,duration,field){
 
   const GRAV=opts.g||2.1;
 
-  let raf, last=performance.now();
+  let raf, last=performance.now(), elapsed=0, bounced=false;
   function frame(now){
     if(ctx.resolved) return;
     const dt=Math.min(0.03,(now-last)/1000); last=now;
+    elapsed+=dt;
     const r=rect();
-    b.vy+=r.height*GRAV*dt;
+    b.vy+=r.height*(bounced?GRAV:GRAV*0.32)*dt;
     b.x+=b.vx*dt;
     b.y+=b.vy*dt;
     b.rot+=b.vx*dt*1.5;
     // よこは画面ループ！
-    if(b.x<-R){ b.x=r.width+R; }
-    if(b.x>r.width+R){ b.x=-R; }
+    if(b.x<R){ b.x=R; b.vx=Math.abs(b.vx); }
+    if(b.x>r.width-R){ b.x=r.width-R; b.vx=-Math.abs(b.vx); }
     // 線にふれたら上へジャンプ！（線はやぶれて消える）
     if(b.vy>0){
       for(const s of segs){
@@ -6659,6 +6725,7 @@ function mechBounceKeep(ctx,opts,duration,field){
         const cx2=s.ax+abx*t, cy2=s.ay+aby*t;
         if(Math.hypot(b.x-cx2,b.y-cy2)<R+6){
           // ぽーん！どこへとぶかはランダム
+          bounced=true;
           b.vy=-r.height*rnd(1.05,1.45);
           b.vx=rnd(-0.55,0.55)*r.width;
           clearLine(true);
@@ -7145,20 +7212,25 @@ function mechFlickBall(ctx,opts,duration,field){
   wf.appendChild(table);
 
   // ゴールポケット（かどか、右かべ）
-  const P_R=opts.pocketR||9;
-  // ポケットはかべ沿いの完全ランダム位置
-  const wall=rndi(0,3); // 0:上 1:右 2:下 3:左
-  let ps;
-  if(wall===0) ps={x:rnd(TB.x0+12,TB.x1-12), y:TB.y0+8};
-  else if(wall===1) ps={x:TB.x1-7, y:rnd(TB.y0+12,TB.y1-12)};
-  else if(wall===2) ps={x:rnd(TB.x0+12,TB.x1-12), y:TB.y1-8};
-  else ps={x:TB.x0+7, y:rnd(TB.y0+12,TB.y1-12)};
-  const pocket=el('div');
-  pocket.style.cssText='position:absolute;left:'+ps.x+'%;top:'+ps.y+'%;width:'+(P_R*2)+'%;aspect-ratio:1;transform:translate(-50%,-50%);border-radius:50%;box-sizing:border-box;z-index:3;pointer-events:none;'
-    +'background:radial-gradient(circle at 40% 35%,#2a3a5c,#101826 70%);border:4px solid #141414;box-shadow:inset 0 3px 6px rgba(0,0,0,.6), 0 0 10px rgba(61,127,214,.5);';
-  wf.appendChild(pocket);
+  const P_R=opts.pocketR||11;
+  // ポケットは複数（かべ沿いのランダム位置に4つ）
+  const POCKETS=[];
+  const walls=[0,1,2,3];
+  for(let wi=walls.length-1;wi>0;wi--){ const j=rndi(0,wi); const t=walls[wi]; walls[wi]=walls[j]; walls[j]=t; }
+  walls.forEach(wall=>{
+    let ps;
+    if(wall===0) ps={x:rnd(TB.x0+12,TB.x1-12), y:TB.y0+8};
+    else if(wall===1) ps={x:TB.x1-7, y:rnd(TB.y0+12,TB.y1-12)};
+    else if(wall===2) ps={x:rnd(TB.x0+12,TB.x1-12), y:TB.y1-8};
+    else ps={x:TB.x0+7, y:rnd(TB.y0+12,TB.y1-12)};
+    const pocket=el('div');
+    pocket.style.cssText='position:absolute;left:'+ps.x+'%;top:'+ps.y+'%;width:'+(P_R*2)+'%;aspect-ratio:1;transform:translate(-50%,-50%);border-radius:50%;box-sizing:border-box;z-index:3;pointer-events:none;'
+      +'background:radial-gradient(circle at 40% 35%,#2a3a5c,#101826 70%);border:4px solid #141414;box-shadow:inset 0 3px 6px rgba(0,0,0,.6), 0 0 10px rgba(61,127,214,.5);';
+    wf.appendChild(pocket);
+    POCKETS.push(ps);
+  });
   const pLbl=el('div','','GOAL');
-  pLbl.style.cssText='position:absolute;left:'+ps.x+'%;top:'+(ps.y-P_R-3)+'%;transform:translate(-50%,-50%);font-size:.6rem;font-weight:900;color:#1e63c9;z-index:3;pointer-events:none;text-shadow:-1px -1px 0 #fff,1px -1px 0 #fff,-1px 1px 0 #fff,1px 1px 0 #fff;letter-spacing:.05em;';
+  pLbl.style.cssText='position:absolute;left:'+POCKETS[0].x+'%;top:'+(POCKETS[0].y-P_R-3)+'%;transform:translate(-50%,-50%);font-size:.6rem;font-weight:900;color:#1e63c9;z-index:3;pointer-events:none;text-shadow:-1px -1px 0 #fff,1px -1px 0 #fff,-1px 1px 0 #fff,1px 1px 0 #fff;letter-spacing:.05em;';
   wf.appendChild(pLbl);
 
   // ねらいの線
@@ -7248,9 +7320,10 @@ function mechFlickBall(ctx,opts,duration,field){
 
   function sink(b){
     b.alive=false;
+    const pk=b._sinkPk||POCKETS[0];
     b.el.style.transition='transform .3s, opacity .3s, left .3s, top .3s';
-    b.el.style.left=(ps.x/100*rect().width-b.R)+'px';
-    b.el.style.top=(ps.y/100*rect().height-b.R)+'px';
+    b.el.style.left=(pk.x/100*rect().width-b.R)+'px';
+    b.el.style.top=(pk.y/100*rect().height-b.R)+'px';
     b.el.style.transform='scale(.15) rotate(240deg)';
     b.el.style.opacity='0';
     setTimeout(()=>{ b.el.remove(); },320);
@@ -7265,8 +7338,8 @@ function mechFlickBall(ctx,opts,duration,field){
     const Y0=TB.y0/100*r.height+8, Y1=TB.y1/100*r.height-8;
     balls.forEach(b=>{
       if(!b.alive) return;
-      b.vx*=Math.exp(-2.0*dt);
-      b.vy*=Math.exp(-1.3*dt);
+      b.vx*=Math.exp(-1.5*dt);
+      b.vy*=Math.exp(-1.0*dt);
       b.x+=b.vx*dt; b.y+=b.vy*dt;
       // かべ
       if(b.x<X0+b.R){ b.x=X0+b.R; b.vx=Math.abs(b.vx)*0.82; }
@@ -7296,17 +7369,19 @@ function mechFlickBall(ctx,opts,duration,field){
         }
       }
     }
-    // ポケット判定
-    const pxp=ps.x/100*r.width, pyp=ps.y/100*r.height;
+    // ポケット判定（複数）
     const pR=P_R/100*r.width;
     balls.forEach(b=>{
       if(!b.alive) return;
-      if(Math.hypot(b.x-pxp,b.y-pyp)<pR*0.85){
+      let inPk=null;
+      for(const pk of POCKETS){ if(Math.hypot(b.x-pk.x/100*r.width, b.y-pk.y/100*r.height)<pR*0.85){ inPk=pk; break; } }
+      if(inPk){
+        b._sinkPk=inPk;
         if(b.type==='target'){
           sink(b);
           remain--;
           const fx=el('div','','✨');
-          fx.style.cssText='position:absolute;left:'+ps.x+'%;top:'+(ps.y-P_R-4)+'%;transform:translate(-50%,-50%);font-size:1.84rem;pointer-events:none;z-index:7;';
+          fx.style.cssText='position:absolute;left:'+(b._sinkPk?b._sinkPk.x:50)+'%;top:'+((b._sinkPk?b._sinkPk.y:50)-P_R-4)+'%;transform:translate(-50%,-50%);font-size:1.84rem;pointer-events:none;z-index:7;';
           wf.appendChild(fx);
           setTimeout(()=>{ fx.remove(); },350);
           if(remain<=0){ setTimeout(()=>{ if(!ctx.resolved) ctx.success(); },340); }
@@ -7439,7 +7514,7 @@ function mechRainbowBridge(ctx,opts,duration,field){
   function rect(){ return wf.getBoundingClientRect(); }
   const r0=rect();
   const holesW=holes.reduce((a,h)=>a+(h.x1-h.x0),0);
-  ink=r0.width*holesW/100*(opts.inkF||1.4);
+  ink=r0.width*holesW/100*(opts.inkF||2.0);
   inkMax=ink;
   function pctOf(e){ const r=rect(); return {x:(e.clientX-r.left)/r.width*100, y:(e.clientY-r.top)/r.height*100, r:r}; }
 
@@ -8391,6 +8466,16 @@ function mechTugOfWar(ctx,opts,duration,field){
   const rope=el('div');
   rope.style.cssText='position:absolute;left:10%;right:10%;top:'+ROPE_Y+'%;height:7px;transform:translateY(-50%);background:linear-gradient(180deg,#d8a253,#a8742f);border:2px solid #141414;border-radius:999px;z-index:2;';
   wf.appendChild(rope);
+  // 引き合うキャラ（自分=赤Cherry／敵=紫Devi）
+  const meImg=document.createElement('img'); meImg.src=CHARACTERS[0].bodyImg||CHARACTERS[0].img; meImg.draggable=false;
+  meImg.style.cssText='position:absolute;top:'+ROPE_Y+'%;width:20%;transform:translate(-50%,-72%) scaleX(-1);z-index:5;pointer-events:none;filter:drop-shadow(0 3px 5px rgba(0,0,0,.3));transition:left .05s;';
+  const foeImg=document.createElement('img'); foeImg.src=CHARACTERS[4].bodyImg||CHARACTERS[4].img; foeImg.draggable=false;
+  foeImg.style.cssText='position:absolute;top:'+ROPE_Y+'%;width:20%;transform:translate(-50%,-72%);z-index:5;pointer-events:none;filter:drop-shadow(0 3px 5px rgba(0,0,0,.3));transition:left .05s;';
+  wf.appendChild(meImg); wf.appendChild(foeImg);
+  // 中央ライン＆勝敗ゾーン
+  const cLine=el('div'); cLine.style.cssText='position:absolute;left:50%;top:'+(ROPE_Y-16)+'%;height:32%;width:0;border-left:3px dashed rgba(120,80,160,.5);transform:translateX(-50%);z-index:1;'; wf.appendChild(cLine);
+  const zoneL=el('div'); zoneL.style.cssText='position:absolute;left:9%;width:14%;top:'+(ROPE_Y-4)+'%;height:8%;background:rgba(46,158,91,.18);border:2px dashed #2e9e5b;border-radius:6px;z-index:0;'; wf.appendChild(zoneL);
+  const zoneR=el('div'); zoneR.style.cssText='position:absolute;right:9%;width:14%;top:'+(ROPE_Y-4)+'%;height:8%;background:rgba(217,36,64,.16);border:2px dashed #d92440;border-radius:6px;z-index:0;'; wf.appendChild(zoneR);
   // 真ん中の結び目マーカー（自作デザイン）
   const ribbon=el('div');
   ribbon.style.cssText='position:absolute;left:50%;top:'+ROPE_Y+'%;width:9%;aspect-ratio:1;transform:translate(-50%,-50%);z-index:4;pointer-events:none;transition:left .08s linear;'
@@ -8437,14 +8522,14 @@ function mechTugOfWar(ctx,opts,duration,field){
   function setPull(){
     if(ctx.resolved) return;
     phase='pull';
-    banner.textContent=LANG==='en'?'PULL!!':'ひけ！！';
+    banner.textContent=LANG==='en'?'PULL!!':'ひけ！！'; banner.style.background='#2ec76a'; banner.style.color='#fff'; banner.style.transform='translateX(-50%) scale(1.15)'; setTimeout(()=>{ banner.style.transform='translateX(-50%) scale(1)'; },150);
     banner.style.background='#2e9e5b';
     later(setRest, rnd(1000,1700));
   }
   function setRest(){
     if(ctx.resolved) return;
     phase='rest';
-    banner.textContent=LANG==='en'?'REST…':'やすめ…';
+    banner.textContent=LANG==='en'?'REST…':'やすめ…'; banner.style.background='#cfcfcf'; banner.style.color='#555'; banner.style.transform='translateX(-50%) scale(1)';
     banner.style.background='#d92440';
     later(setPull, rnd(600,1200));
   }
@@ -8455,6 +8540,8 @@ function mechTugOfWar(ctx,opts,duration,field){
     if(ctx.resolved) return;
     if(phase==='pull'){
       pos-=TAPPOW;
+      meImg.style.transform='translate(-50%,-72%) scaleX(-1) rotate(-8deg)';
+      setTimeout(()=>{ meImg.style.transform='translate(-50%,-72%) scaleX(-1)'; },80);
     }else if(phase==='rest'){
       pos+=SLIP; // すべった！
       ribbon.style.transform='translate(-50%,-100%) rotate(20deg)';
@@ -8469,6 +8556,8 @@ function mechTugOfWar(ctx,opts,duration,field){
     if(phase==='pull') pos+=ENEMY*dt; // 敵も引いてる
     pos=Math.max(-27,Math.min(27,pos));
     ribbon.style.left=(50+pos)+'%';
+    meImg.style.left=(23+pos*0.55)+'%';
+    foeImg.style.left=(77+pos*0.55)+'%';
     // 勢力バーと形勢コメント
     barRed.style.width=(50-pos/27*50)+'%';
     if(pos<-5){ momentum.textContent=LANG==='en'?'WINNING!':'おしてる！'; momentum.style.color='#2e9e5b'; }
@@ -9469,7 +9558,7 @@ function mechSeesaw(ctx,opts,duration,field){
 
   const hint=el('div');
   hint.style.cssText='position:absolute;top:4%;left:0;right:0;text-align:center;color:#c2185b;font-weight:900;font-size:.88rem;z-index:6;text-shadow:-1px -1px 0 #fff,1px -1px 0 #fff,-1px 1px 0 #fff,1px 1px 0 #fff;';
-  hint.textContent=LANG==='en'?'Tap L/R to balance! Lose 2 = OUT!':'左右タップでバランス！2個落としたら負け！';
+  hint.textContent=LANG==='en'?'Tap L/R to balance! Do not drop!':'左右タップでバランス！落としたら負け！';
   wf.appendChild(hint);
 
   // 支点
@@ -9479,7 +9568,8 @@ function mechSeesaw(ctx,opts,duration,field){
 
   // シーソー板（この中にキャラを乗せる）
   const plank=el('div');
-  plank.style.cssText='position:absolute;left:50%;top:62%;width:86%;height:14px;margin-left:-43%;margin-top:-7px;background:linear-gradient(180deg,#e8935f,#c9713d);border:3px solid #141414;border-radius:999px;box-sizing:border-box;z-index:3;transform-origin:50% 50%;';
+  plank.style.transformOrigin='50% 50%';
+  plank.style.cssText='position:absolute;left:50%;top:62%;width:86%;height:14px;margin-left:-43%;margin-top:-7px;transform-origin:50% 50%;transition:transform .06s linear;background:linear-gradient(180deg,#e8935f,#c9713d);border:3px solid #141414;border-radius:999px;box-sizing:border-box;z-index:3;transform-origin:50% 50%;';
   wf.appendChild(plank);
 
   // タップ方向ガイド
@@ -9501,6 +9591,16 @@ function mechSeesaw(ctx,opts,duration,field){
   outCnt.style.cssText='position:absolute;top:12%;right:6%;color:#c2185b;font-family:ArcadeNum,monospace;font-size:.85rem;z-index:6;text-shadow:-1px -1px 0 #fff,1px -1px 0 #fff,-1px 1px 0 #fff,1px 1px 0 #fff;';
   outCnt.textContent='OUT 0/1';
   wf.appendChild(outCnt);
+  // 左右タップの目印
+  const tapL=el('div','','◀ タップ');
+  tapL.style.cssText='position:absolute;left:4%;top:44%;color:#c2185b;font-weight:900;font-size:.9rem;z-index:4;opacity:.6;text-shadow:-1px -1px 0 #fff,1px -1px 0 #fff,-1px 1px 0 #fff,1px 1px 0 #fff;pointer-events:none;';
+  const tapR=el('div','','タップ ▶');
+  tapR.style.cssText='position:absolute;right:4%;top:44%;color:#c2185b;font-weight:900;font-size:.9rem;z-index:4;opacity:.6;text-shadow:-1px -1px 0 #fff,1px -1px 0 #fff,-1px 1px 0 #fff,1px 1px 0 #fff;pointer-events:none;';
+  wf.appendChild(tapL); wf.appendChild(tapR);
+  // 中央の点線（バランス基準）
+  const midLine=el('div');
+  midLine.style.cssText='position:absolute;left:50%;top:20%;bottom:30%;width:0;border-left:3px dashed rgba(194,24,91,.3);transform:translateX(-50%);z-index:1;pointer-events:none;';
+  wf.appendChild(midLine);
 
   // 板の上のキャラたち
   const chars=[];
@@ -9538,8 +9638,8 @@ function mechSeesaw(ctx,opts,duration,field){
     const r=wf.getBoundingClientRect();
     const leftSide=(e.clientX-r.left)<r.width/2;
     // タップした側が上に上がる
-    if(leftSide){ thVel+=TAP; gl.style.transform='scale(1.4)'; setTimeout(()=>{ gl.style.transform='scale(1)'; },100); }
-    else{ thVel-=TAP; gr.style.transform='scale(1.4)'; setTimeout(()=>{ gr.style.transform='scale(1)'; },100); }
+    if(leftSide){ thVel+=TAP; gl.style.transform='scale(1.5)'; tapL.style.opacity='1'; tapL.style.transform='scale(1.2)'; setTimeout(()=>{ gl.style.transform='scale(1)'; tapL.style.opacity='.6'; tapL.style.transform='scale(1)'; },130); }
+    else{ thVel-=TAP; gr.style.transform='scale(1.5)'; tapR.style.opacity='1'; tapR.style.transform='scale(1.2)'; setTimeout(()=>{ gr.style.transform='scale(1)'; tapR.style.opacity='.6'; tapR.style.transform='scale(1)'; },130); }
   });
 
   function charFall(c){
@@ -9570,6 +9670,7 @@ function mechSeesaw(ctx,opts,duration,field){
     theta+=thVel*dt;
     if(theta>0.5){ theta=0.5; thVel=Math.min(0,thVel); }
     if(theta<-0.5){ theta=-0.5; thVel=Math.max(0,thVel); }
+    plank.style.transform='rotate('+(theta*57.2958)+'deg)';
     // キャラが傾きで転がる
     chars.forEach(c=>{
       if(!c.alive) return;
@@ -9727,7 +9828,7 @@ function mechCharFlash(ctx,opts,duration,field){
 
   // フラッシュ表示エリア
   const flash=el('div');
-  flash.style.cssText='position:absolute;left:50%;top:30%;width:36%;max-width:160px;aspect-ratio:1;transform:translate(-50%,-50%);display:flex;align-items:center;justify-content:center;z-index:3;';
+  flash.style.cssText='position:absolute;left:50%;top:26%;width:36%;max-width:160px;aspect-ratio:1;transform:translate(-50%,-50%);display:flex;align-items:center;justify-content:center;z-index:3;';
   wf.appendChild(flash);
   const flashImg=document.createElement('img');
   flashImg.draggable=false;
@@ -9739,17 +9840,21 @@ function mechCharFlash(ctx,opts,duration,field){
 
   // 5キャラのボタン（3+2の2段で大きく）
   const rows=el('div');
-  rows.style.cssText='position:absolute;left:0;right:0;bottom:3%;display:flex;flex-direction:column;align-items:center;gap:6px;z-index:5;';
+  rows.style.cssText='position:absolute;left:0;right:0;bottom:14%;display:flex;flex-direction:column;align-items:center;gap:12px;z-index:5;';
   const row1=el('div');
   row1.style.cssText='display:flex;justify-content:center;gap:4%;width:94%;';
   const row2=el('div');
   row2.style.cssText='display:flex;justify-content:center;gap:4%;width:94%;';
   rows.appendChild(row1); rows.appendChild(row2);
   wf.appendChild(rows);
+  // 進捗ドット
+  const dotRow=el('div');
+  dotRow.style.cssText='position:absolute;left:50%;top:14%;transform:translateX(-50%);display:flex;gap:6px;z-index:6;';
+  const dots=[];
   const btns=[];
   CHARACTERS.forEach((c,ci)=>{
     const b=el('div');
-    b.style.cssText='width:27%;max-width:110px;aspect-ratio:1;border-radius:50%;background:rgba(255,255,255,.7);border:4px solid '+c.color+';box-sizing:border-box;display:flex;align-items:center;justify-content:center;opacity:.35;transition:opacity .15s, transform .1s;cursor:pointer;touch-action:manipulation;box-shadow:0 3px 6px rgba(179,42,66,.2);';
+    b.style.cssText='width:30%;max-width:126px;aspect-ratio:1;border-radius:50%;background:rgba(255,255,255,.7);border:4px solid '+c.color+';box-sizing:border-box;display:flex;align-items:center;justify-content:center;opacity:.35;transition:opacity .15s, transform .1s;cursor:pointer;touch-action:manipulation;box-shadow:0 3px 6px rgba(179,42,66,.2);position:relative;';
     const im=document.createElement('img');
     im.src=c.img; im.alt=c.name; im.draggable=false;
     im.style.cssText='width:86%;height:86%;object-fit:contain;pointer-events:none;';
@@ -9759,24 +9864,41 @@ function mechCharFlash(ctx,opts,duration,field){
     b.addEventListener('pointerdown',(e)=>{
       e.preventDefault();
       if(ctx.resolved||phase!=='input') return;
-      b.style.transform='scale(.88)';
-      setTimeout(()=>{ b.style.transform='scale(1)'; },90);
+      // 押した感：明るく光って弾む
+      b.style.opacity='1';
+      b.style.boxShadow='0 0 0 5px '+c.color+', 0 0 18px '+c.color;
+      b.style.transform='scale(1.16)';
+      const wasOp='.35';
+      setTimeout(()=>{ b.style.transform='scale(1)'; },110);
+      setTimeout(()=>{ b.style.boxShadow='0 3px 6px rgba(179,42,66,.2)'; if(phase==='input') b.style.opacity=wasOp; },200);
       if(ci===seq[inputIdx]){
         inputIdx++;
         counter.textContent=inputIdx+'/'+len;
         flashNum.textContent=(inputIdx>=len)?'':(inputIdx+1)+'/'+len+(LANG==='en'?'':' 個目');
-        const fx=el('div','','✨');
-        fx.style.cssText='position:absolute;left:50%;top:-30%;transform:translateX(-50%);font-size:1.2rem;pointer-events:none;';
-        b.appendChild(fx);
-        setTimeout(()=>{ fx.remove(); },250);
-        if(inputIdx>=len) ctx.success();
+        // 正解の反応：○が弾んで出る＋緑グロー＋進捗ドット点灯
+        const ok=el('div','','⭕');
+        ok.style.cssText='position:absolute;left:50%;top:-42%;transform:translate(-50%,-50%) scale(.4);font-size:1.7rem;pointer-events:none;z-index:9;transition:transform .18s cubic-bezier(.2,1.5,.4,1), opacity .3s;opacity:1;';
+        b.appendChild(ok);
+        requestAnimationFrame(()=>{ ok.style.transform='translate(-50%,-50%) scale(1.1)'; });
+        setTimeout(()=>{ ok.style.opacity='0'; ok.style.transform='translate(-50%,-70%) scale(1.1)'; },230);
+        setTimeout(()=>{ ok.remove(); },560);
+        b.style.boxShadow='0 0 0 5px #2ec76a, 0 0 20px #7bff9f';
+        if(dots&&dots[inputIdx-1]){ dots[inputIdx-1].style.background='#2ec76a'; dots[inputIdx-1].style.transform='scale(1.35)'; setTimeout(()=>{ if(dots[inputIdx-1]) dots[inputIdx-1].style.transform='scale(1)'; },200); }
+        if(inputIdx>=len){ gfxPop(wf,50,30,'クリア！',1.6); setTimeout(()=>{ if(!ctx.resolved) ctx.success(); },350); }
       }else{
-        ctx.fail(); // 順番ミス
+        // ミスの反応
+        b.style.boxShadow='0 0 0 5px #e53950, 0 0 18px #ff8a9a';
+        const ng=el('div','','❌');
+        ng.style.cssText='position:absolute;left:50%;top:-42%;transform:translate(-50%,-50%);font-size:1.6rem;pointer-events:none;z-index:9;';
+        b.appendChild(ng);
+        setTimeout(()=>{ if(!ctx.resolved) ctx.fail(); },300);
       }
     });
   });
 
   let phase='show', inputIdx=0;
+  for(let di=0; di<len; di++){ const d=el('div'); d.style.cssText='width:9px;height:9px;border-radius:50%;background:rgba(194,24,91,.25);transition:transform .2s, background .2s;'; dotRow.appendChild(d); dots.push(d); }
+  wf.appendChild(dotRow);
   const timers=[];
   function later(fn,ms){ const t=setTimeout(fn,ms); timers.push(t); return t; }
 
@@ -9848,12 +9970,26 @@ function mechExactTap(ctx,opts,duration,field){
     e.preventDefault();
     if(ctx.resolved) return;
     taps++;
-    hand.style.transform='translate(-50%,-50%) scale(.9) rotate('+rnd(-5,5)+'deg)';
-    setTimeout(()=>{ hand.style.transform='translate(-50%,-50%)'; },55);
-    const fx=el('div','','✨');
-    fx.style.cssText='position:absolute;left:'+rnd(34,66)+'%;top:'+rnd(30,60)+'%;transform:translate(-50%,-50%);font-size:1.38rem;pointer-events:none;z-index:5;';
-    wf.appendChild(fx);
-    setTimeout(()=>{ fx.remove(); },220);
+    // 手をしっかり押し込む→弾む
+    hand.style.transition='transform .07s';
+    hand.style.transform='translate(-50%,-50%) scale(.78) rotate('+rnd(-6,6)+'deg)';
+    setTimeout(()=>{ hand.style.transform='translate(-50%,-50%) scale(1.06)'; },75);
+    setTimeout(()=>{ hand.style.transform='translate(-50%,-50%)'; },170);
+    // タップ位置にリング＋ポン
+    const r=wf.getBoundingClientRect();
+    const tx=r.width?((e.clientX-r.left)/r.width*100):50;
+    const ty=r.height?((e.clientY-r.top)/r.height*100):50;
+    const ring=el('div');
+    ring.style.cssText='position:absolute;left:'+tx+'%;top:'+ty+'%;width:16%;aspect-ratio:1;border:4px solid #e0322b;border-radius:50%;transform:translate(-50%,-50%) scale(.4);pointer-events:none;z-index:6;transition:transform .3s ease-out, opacity .35s;opacity:.9;';
+    wf.appendChild(ring);
+    requestAnimationFrame(()=>{ ring.style.transform='translate(-50%,-50%) scale(1.5)'; ring.style.opacity='0'; });
+    setTimeout(()=>{ ring.remove(); },380);
+    const pop=el('div','','ポンッ');
+    pop.style.cssText='position:absolute;left:'+tx+'%;top:'+(ty-9)+'%;transform:translate(-50%,-50%) scale(.6);color:#e0225a;font-weight:900;font-size:1.1rem;pointer-events:none;z-index:7;text-shadow:-1.5px -1.5px 0 #fff,1.5px -1.5px 0 #fff,-1.5px 1.5px 0 #fff,1.5px 1.5px 0 #fff;transition:transform .18s cubic-bezier(.2,1.6,.4,1), opacity .3s;opacity:1;';
+    wf.appendChild(pop);
+    requestAnimationFrame(()=>{ pop.style.transform='translate(-50%,-90%) scale(1.05)'; });
+    setTimeout(()=>{ pop.style.opacity='0'; },230);
+    setTimeout(()=>{ pop.remove(); },520);
     if(taps>need){
       ctx.fail(); // 押しすぎ！
     }
@@ -10902,7 +11038,8 @@ async function showCall(config){
   playfield.appendChild(resultOverlay);
   resultOverlay.className='';
   resultOverlay.textContent='';
-  const character = (mode==='gallery') ? (_currentRoundChar=charForConfig(config)) : determineActiveCharacter();
+  // 左上アイコン＝テーマ色＝ゲームの本当の担当キャラ（charForConfig）で常に一致させる
+  const character = (mode==='normal' && selectedCharacter) ? (_currentRoundChar=selectedCharacter) : (_currentRoundChar=charForConfig(config));
   highlightActiveCharacter();
   // ゲームの持ち主キャラでお題画面＆ゲーム画面のテーマを切り替え（赤=チェリー / 青=ステラ）
   const ownerId = charForConfig(config).id;
@@ -11670,8 +11807,8 @@ tutorialScreenEl.style.backgroundImage =
 'linear-gradient(175deg,#efe6fb 0%,#f6eefb 55%,#fbeef4 100%)';
 
 // ==== チュートリアル演出 (キャラ自己紹介 → デモ → ゲームスタート) ====
-const CTL_ACTION_JA={ button:'ボタンをおす', lever:'レバーをうごかす', all:'いろんな操作', padlever:'レバーとⒶⒷボタンで操作' };
-const CTL_ACTION_EN={ button:'pressing buttons', lever:'moving the lever', all:'all kinds of moves', padlever:'the lever and A/B buttons' };
+const CTL_ACTION_JA={ button:'ボタンをおす', lever:'レバーをうごかす', all:'いろんな操作', padlever:'レバーとⒶⒷボタンで操作', tap:'タップ', trace:'なぞって操作' };
+const CTL_ACTION_EN={ button:'pressing buttons', lever:'moving the lever', all:'all kinds of moves', padlever:'the lever and A/B buttons', tap:'tapping', trace:'tracing' };
 
 function startStoryTutorial(character){
   selectedCharacter=character;
@@ -11684,9 +11821,8 @@ function tutorialStep1(character){
   document.getElementById('tutorialStepIntro').style.display='flex';
   document.getElementById('tutorialStepDemo').style.display='none';
   document.getElementById('tutorialStepGo').style.display='none';
-  const guide=CHARACTERS[3];  // 案内人はピンクのココ！
-  document.getElementById('tutorialCharImg').src=guide.bodyImg||guide.img;
-  document.getElementById('tutorialCharImg').alt=guide.name;
+  document.getElementById('tutorialCharImg').src=character.bodyImg||character.img;
+  document.getElementById('tutorialCharImg').alt=character.name;
   const action = LANG==='en' ? CTL_ACTION_EN[character.controlType] : CTL_ACTION_JA[character.controlType];
   const line = LANG==='en'
     ? "This is "+character.name+"! A game mostly about "+action+" the screen!"
@@ -11759,7 +11895,7 @@ function renderCharSelect(){
     card.appendChild(img);
     const info=el('div','charselect-info');
     info.appendChild(el('div','charselect-name',c.name));
-    const tagTxt = dev?(LANG==='en'?'COMING SOON':'じゅんびちゅう…') : (jLocked?(c.id===1?'赤30連続 or ミーティア10':'青30連続 or ミーティア10'):L(c.ctlKey));
+    const tagTxt = dev?(LANG==='en'?'COMING SOON':'じゅんびちゅう…') : (jLocked?(c.id===1?'赤20連続 or ミーティア10':'青20連続 or ミーティア10'):L(c.ctlKey));
     info.appendChild(el('span','charselect-tag',tagTxt));
     card.appendChild(info);
     if(dev){ card.appendChild(el('div','dev-ribbon',LANG==='en'?'IN DEV':'開発中')); }
@@ -11850,10 +11986,10 @@ let _unlockTarget=null;
 function openCharUnlock(c){
   _unlockTarget=c;
   const isBlue=(c.id===1);
-  const needColor=isBlue?'赤':'青';
+  const needName=isBlue?'Cherry':'Stella';
   const cur=isBlue?STREAK.red:STREAK.blue;
   document.getElementById('unlockTitle').textContent=c.name+' を解放';
-  document.getElementById('unlockBody').innerHTML=needColor+'キャラで 30ゲーム 連続クリアで解放！<br>（いま '+cur+' / 30）<br>または ミーティア10こで解放<br>（もっている ミーティア：'+METEORS+'）';
+  document.getElementById('unlockBody').innerHTML='<b>'+needName+'で 20連続クリア</b> または <b>ミーティア10こ</b>で解放！<br>連続クリア '+cur+' / 20　｜　ミーティア数 '+METEORS;
   const mb=document.getElementById('unlockMeteor'); mb.disabled=(METEORS<10);
   document.getElementById('unlockModal').classList.remove('hidden');
 }
@@ -11864,8 +12000,8 @@ document.getElementById('unlockMeteor').addEventListener('pointerdown',function(
 document.getElementById('unlockClose').addEventListener('pointerdown',function(e){ e.preventDefault(); document.getElementById('unlockModal').classList.add('hidden'); });
 function journeyOnResult(ok, ch){
   if(!ch) return;
-  if(ch.id===0){ STREAK.red = ok?(STREAK.red+1):0; if(ok&&STREAK.red>=30&&!JOURNEY_UNLOCK.blue){ JOURNEY_UNLOCK.blue=true; STREAK.red=0; coinToast('赤30連続！ 青キャラ解放！'); } }
-  else if(ch.id===1){ STREAK.blue = ok?(STREAK.blue+1):0; if(ok&&STREAK.blue>=30&&!JOURNEY_UNLOCK.green){ JOURNEY_UNLOCK.green=true; STREAK.blue=0; coinToast('青30連続！ 緑キャラ解放！'); } }
+  if(ch.id===0){ STREAK.red = ok?(STREAK.red+1):0; if(ok&&STREAK.red>=20&&!JOURNEY_UNLOCK.blue){ JOURNEY_UNLOCK.blue=true; STREAK.red=0; coinToast('赤20連続！ 青キャラ解放！'); } }
+  else if(ch.id===1){ STREAK.blue = ok?(STREAK.blue+1):0; if(ok&&STREAK.blue>=20&&!JOURNEY_UNLOCK.green){ JOURNEY_UNLOCK.green=true; STREAK.blue=0; coinToast('青20連続！ 緑キャラ解放！'); } }
   saveJourney();
 }
 function maybeLoginBonus(next){
