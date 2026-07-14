@@ -19,7 +19,7 @@
                       Messages, Browsing History, Financial Info
 
   Privacy Policy URL (required in App Store Connect):
-  → https://airis-games.com/privacy-policy
+  → https://[YOUR-DOMAIN]/speed100/privacy  ← 要設定
   ═══════════════════════════════════════════════════════════════
 -->
 <!DOCTYPE html>
@@ -193,7 +193,7 @@
 .survey-row .sv-pct{ font-weight:900; font-size:.8rem; width:2.6rem; text-align:right; }
 .survey-row .sv-vote{ background:#e0225a; color:#fff; border:2.5px solid #141414; border-radius:999px; font-weight:900; padding:.3rem .7rem; }
 .survey-row.voted .sv-vote{ background:#1f9a4d; }
-.survey-thanks{ text-align:center; font-weight:900; color:#1f9a4d; margin:.4rem 0; min-height:1.2rem; }
+#surveyThanks{ text-align:center; font-weight:900; color:#1f9a4d; margin:.4rem 0; min-height:1.2rem; }
 #screen-other{ justify-content:flex-start; padding:1.2rem 1.4rem; padding-top:calc(1.1rem + env(safe-area-inset-top)); background:linear-gradient(175deg,#dff3ff 0%,#c6e6fa 60%,#bfe0f7 100%); }
 #screen-title{ justify-content:flex-end; align-items:center;
   padding:0 0 calc(9% + env(safe-area-inset-bottom));
@@ -1304,11 +1304,11 @@ button{font-family:inherit; border:none; background:none; color:inherit; cursor:
     <div class="select-header">
       <h2 class="select-title">Cosmii Arcade</h2>
       <div id="selectWallet">
-        <span class="sw-item"><img class="js-wallet-coin-img" alt="coin"><b class="js-wallet-coin">0</b></span>
-        <span class="sw-item"><img class="js-wallet-met-img" alt="meteor"><b class="js-wallet-met">0</b></span>
+        <span class="sw-item"><img id="walletCoinImg" alt="coin"><b id="walletCoin">0</b></span>
+        <span class="sw-item"><img id="walletMetImg" alt="meteor"><b id="walletMet">0</b></span>
       </div>
     </div>
-    <div id="buildTag">v46 0711-1522</div>
+    <div id="buildTag">v48 0711-1810</div>
     <div class="menu-list">
       <button class="menu-item" id="btnNormal">
         <span class="menu-num">①</span>
@@ -1377,8 +1377,8 @@ button{font-family:inherit; border:none; background:none; color:inherit; cursor:
       <h2 class="gallery-title">ガチャ・ショップ</h2>
     </div>
     <div id="walletBar">
-      <div class="wallet-item"><img class="js-wallet-coin-img" alt="coin"><span class="js-wallet-coin">0</span></div>
-      <div class="wallet-item"><img class="js-wallet-met-img" alt="meteor"><span class="js-wallet-met">0</span></div>
+      <div class="wallet-item"><img id="walletCoinImg" alt="coin"><span id="walletCoin">0</span></div>
+      <div class="wallet-item"><img id="walletMetImg" alt="meteor"><span id="walletMet">0</span></div>
     </div>
     <div class="menu-list" style="margin-top:.6rem;">
       <button class="menu-item" id="btnHubGacha">
@@ -1704,7 +1704,7 @@ button{font-family:inherit; border:none; background:none; color:inherit; cursor:
       <p>iOS版では App Tracking Transparency（ATT）に基づき、広告トラッキングの許可をお伺いします。「許可しない」を選んでもゲームは通常通り遊べます。</p>
 
       <p style="margin-top:1rem;">プライバシーポリシー・利用規約の全文、お問い合わせ先は以下のサイトをご覧ください。</p>
-      <a class="gbtn" id="btnPrivacyWeb" href="https://airis-games.com/privacy-policy" target="_blank" rel="noopener" style="display:block;text-align:center;text-decoration:none;margin:.8rem 0;">📄 プライバシーポリシー全文を見る</a>
+      <a class="gbtn" id="btnPrivacyWeb" href="https://mrshu1mura0829-png.github.io/airis-games-legal/privacy.html" target="_blank" rel="noopener" style="display:block;text-align:center;text-decoration:none;margin:.8rem 0;">📄 プライバシーポリシー全文を見る</a>
 
       <button class="gbtn close" id="btnCloseInfo">とじる</button>
     </div>
@@ -1901,12 +1901,6 @@ button{font-family:inherit; border:none; background:none; color:inherit; cursor:
 <script>
 (function(){
 "use strict";
-
-// ==== デバッグフラグ（本番では無効。?debug=1 または localStorage.cosmii_debug=1 で有効）====
-var DEBUG=false;
-try{ DEBUG = /[?&]debug=1(?:&|$)/.test(location.search) || localStorage.getItem('cosmii_debug')==='1'; }catch(e){}
-// 本番ではビルドタグ（バージョン表示）を隠す
-try{ if(!DEBUG){ var __bt=document.getElementById('buildTag'); if(__bt) __bt.style.display='none'; } }catch(e){}
 
 // ==== お題画面ミニデモ（うごくプレビュー） ====
 window.__ccDemoStop=null;
@@ -2234,9 +2228,8 @@ function fitLiveThumb(scene){
   });
 }
 
-// ==== エラーがおきたら画面に小さく表示（デバッグ用。本番では非表示） ====
+// ==== エラーがおきたら画面に小さく表示（デバッグ用） ====
 window.addEventListener('error', function(ev){
-  if(!DEBUG) return;
   try{
     let bar=document.getElementById('errBar');
     if(!bar){
@@ -10865,7 +10858,7 @@ function recordRank(modeKey, pts){
 }
 function saveMeteors(){ try{ localStorage.setItem('cosmii_meteors',String(METEORS)); }catch(e){} }
 function saveBaicoin(){ try{ localStorage.setItem('cosmii_baicoin',String(BAICOIN)); }catch(e){} }
-function consumeBaicoin(){ if(window.__useBaicoin && BAICOIN>0){ BAICOIN--; saveBaicoin(); window.__baicoinActive=true; if(window.GA) window.GA.resource('Sink','baicoin',1,'gameplay','rush'); } else { window.__baicoinActive=false; } }
+function consumeBaicoin(){ if(window.__useBaicoin && BAICOIN>0){ BAICOIN--; saveBaicoin(); window.__baicoinActive=true; } else { window.__baicoinActive=false; } }
 window.__useBaicoin=false;
 function refreshBaicoinToggle(){
   const btn=document.getElementById('btnUseBaicoin');
@@ -10878,10 +10871,10 @@ function refreshBaicoinToggle(){
   const cl=document.getElementById('baicoinCountLabel'); if(cl) cl.textContent='所持 ×'+BAICOIN+' ／ このRushだけ コイン2ばい'+(has?'':'（ショップで買えるよ）');
 }
 function updateCoinUi(){
-  document.querySelectorAll('.js-wallet-coin').forEach(e=>{ e.textContent=String(COINS); });
-  document.querySelectorAll('.js-wallet-met').forEach(e=>{ e.textContent=String(METEORS); });
-  document.querySelectorAll('.js-wallet-coin-img').forEach(e=>{ if(!e.getAttribute('src')) e.src=IMG_COIN; });
-  document.querySelectorAll('.js-wallet-met-img').forEach(e=>{ if(!e.getAttribute('src')) e.src=IMG_METEOR; });
+  const wc=document.getElementById('walletCoin'); if(wc) wc.textContent=String(COINS);
+  const wm=document.getElementById('walletMet'); if(wm) wm.textContent=String(METEORS);
+  const wci=document.getElementById('walletCoinImg'); if(wci&&!wci.src) wci.src=IMG_COIN;
+  const wmi=document.getElementById('walletMetImg'); if(wmi&&!wmi.src) wmi.src=IMG_METEOR;
 }
 function coinIco(){ return '<img class="coin-ico" src="'+IMG_COIN+'" alt="coin">'; }
 function coinToast(msg){
@@ -10898,7 +10891,6 @@ function addCoins(n,label){
   try{ localStorage.setItem('cosmii_coins',String(COINS)); }catch(e){}
   updateCoinUi();
   coinToast((label?label+' ':'')+'+'+n+coinIco());
-  if(window.GA) window.GA.resource('Source','coin',n,(label?'bonus':'gameplay'),label||'clear');
 }
 function renderCabinetCharRow(){
   cabinetCharRowEl.innerHTML='';
@@ -11434,14 +11426,6 @@ async function gameLoop(modeArg){
   hideAdMobBanner();
   showScreen('game');
   running=true;
-  if(window.GA){
-    if(mode==='normal'){
-      window.GA.progression('Start','Journey', selectedCharacter?selectedCharacter.name:'unknown');
-    }else{
-      var diff=(window.__rndLives===5)?'Easy':'Hard';
-      window.GA.progression('Start','Rush',diff);
-    }
-  }
   if(_bgmOn){ startBgm(); }
   while(lives>0 && running){
     const config=nextConfig();
@@ -11463,9 +11447,6 @@ async function gameLoop(modeArg){
       return;
     }
     if(ok){ cleared++; score+=10; } else { lives--; }
-    if(window.GA && config && config.type){
-      window.GA.design('MiniGame:'+config.type+':'+(ok?'clear':'fail'));
-    }
     updateHud();
     await showResult(ok, timedOut);
     if(!running) return;
@@ -11508,16 +11489,6 @@ function finishGame(){
     const modeKey=(window.__rndLives===5)?'easy':'hard';
     recordRank(modeKey, score);
   }
-  if(window.GA){
-    var status=(cleared>0)?'Complete':'Fail';
-    if(mode==='normal'){
-      window.GA.progression(status,'Journey', selectedCharacter?selectedCharacter.name:'unknown', '', score);
-    }else{
-      var diff=(window.__rndLives===5)?'Easy':'Hard';
-      window.GA.progression(status,'Rush',diff,'',score);
-    }
-    window.GA.design('Result:'+mode+':cleared', cleared);
-  }
   renderOverChrome();
   document.getElementById('overTitle').textContent = '★ '+(mode==='hard' ? L('overHard') : L('overNormal'))+' ★';
   document.getElementById('finalScore').textContent=String(score).padStart(6,'0');
@@ -11557,7 +11528,6 @@ function renderGachaOwned(){
 function rollGacha(){
   if(COINS<GACHA_COST){ coinToast('コインが たりないよ！（あと '+(GACHA_COST-COINS)+'）'); return; }
   COINS-=GACHA_COST; try{ localStorage.setItem('cosmii_coins',String(COINS)); }catch(e){}
-  if(window.GA) window.GA.resource('Sink','coin',GACHA_COST,'gacha','pull');
   updateCoinUi();
   const idx=Math.floor(Math.random()*CHARACTERS.length);
   const isNew=GACHA_OWNED.indexOf(idx)<0;
@@ -11596,7 +11566,7 @@ function renderGameSurvey(){
   } else {
     const total=Object.values(GAME_SURVEY).reduce((a,b)=>a+b,0)||1;
     const ranked=Object.keys(GAME_SURVEY).sort((a,b)=>GAME_SURVEY[b]-GAME_SURVEY[a]).slice(0,10);
-    let html='<div class="survey-thanks">とうひょう ありがとう！（'+(GAME_META[MY_GAME_VOTE]?GAME_META[MY_GAME_VOTE].ja:'')+'）</div>';
+    let html='<div id="surveyThanks">とうひょう ありがとう！（'+(GAME_META[MY_GAME_VOTE]?GAME_META[MY_GAME_VOTE].ja:'')+'）</div>';
     ranked.forEach(k=>{
       const pct=Math.round(GAME_SURVEY[k]/total*100);
       html+='<div class="survey-row'+(MY_GAME_VOTE===k?' voted':'')+'" style="padding-left:.4rem;">'
@@ -11610,7 +11580,7 @@ function renderGameSurvey(){
 function renderSurvey(){
   const body=document.getElementById('surveyBody');
   const total=SURVEY_VOTES.reduce((a,b)=>a+b,0)||1;
-  body.innerHTML='<div class="survey-thanks">'+(MY_VOTE>=0?'とうひょう ありがとう！':'すきなキャラを えらんでね')+'</div>';
+  body.innerHTML='<div id="surveyThanks">'+(MY_VOTE>=0?'とうひょう ありがとう！':'すきなキャラを えらんでね')+'</div>';
   CHARACTERS.forEach((c,i)=>{
     const pct=Math.round(SURVEY_VOTES[i]/total*100);
     const row=el('div','survey-row'+(MY_VOTE===i?' voted':''));
@@ -11650,11 +11620,8 @@ function renderShop(){
         if(COINS>=it.price){
           COINS-=it.price;
           try{ localStorage.setItem('cosmii_coins',String(COINS)); }catch(err){}
-          if(window.GA) window.GA.resource('Sink','coin',it.price,'shop',it.key);
           if(consumable){
-            if(it.key==='coin2'){ BAICOIN++; saveBaicoin();
-              if(window.GA) window.GA.resource('Source','baicoin',1,'shop',it.key);
-            }
+            if(it.key==='coin2'){ BAICOIN++; saveBaicoin(); }
           } else {
             SHOP_OWNED[it.key]=true; saveShop();
           }
@@ -11838,9 +11805,12 @@ async function playGalleryRound(config){
   showScreen('gallery');
 }
 
-function goToSelect(){ if(window.GA) window.GA.design('MenuOpen'); showScreen('select'); }
+function goToSelect(){ showScreen('select'); }
 (function(){ const a=document.getElementById('titleArt'), bg=document.getElementById('titleArtBg'); if(a&&bg) bg.src=a.src; })();
-document.getElementById('btnPlay').addEventListener('pointerdown',(e)=>{ e.preventDefault(); maybeLoginBonus(goToSelect); });
+let _titleGo=false;
+function titleStart(){ if(_titleGo) return; _titleGo=true; maybeLoginBonus(goToSelect); }
+document.getElementById('btnPlay').addEventListener('pointerdown',(e)=>{ e.preventDefault(); e.stopPropagation(); titleStart(); });
+document.getElementById('screen-title').addEventListener('pointerdown',(e)=>{ e.preventDefault(); titleStart(); });
 
 const charSelectScreenEl=document.getElementById('screen-charselect');
 charSelectScreenEl.style.background = 'linear-gradient(175deg,#efe6fb 0%,#f6eefb 55%,#fbeef4 100%)';
@@ -11856,7 +11826,6 @@ const CTL_ACTION_EN={ button:'pressing buttons', lever:'moving the lever', all:'
 function startStoryTutorial(character){
   selectedCharacter=character;
   storyControlType=character.controlType;
-  if(window.GA) window.GA.design('CharSelect:'+character.name);
   showScreen('tutorial');
   tutorialStep1(character);
 }
@@ -11983,13 +11952,13 @@ document.getElementById('btnRndEasy').addEventListener('pointerdown',(e)=>{ e.pr
 document.getElementById('btnRndHard').addEventListener('pointerdown',(e)=>{ e.preventDefault(); window.__rndLives=1; consumeBaicoin(); gameLoop('hard'); });
 document.getElementById('btnGallery').addEventListener('pointerdown',(e)=>{ e.preventDefault(); renderGallery(); showScreen('gallery'); });
 document.getElementById('btnGalleryBack').addEventListener('pointerdown',(e)=>{ e.preventDefault(); showScreen('select'); });
-document.getElementById('btnRetry').addEventListener('pointerdown',(e)=>{ e.preventDefault(); if(window.GA) window.GA.design('Retry:'+mode); gameLoop(mode); });
+document.getElementById('btnRetry').addEventListener('pointerdown',(e)=>{ e.preventDefault(); gameLoop(mode); });
 document.getElementById('btnToMenu').addEventListener('pointerdown',(e)=>{ e.preventDefault(); showScreen('select'); });
 document.getElementById('btnOther').addEventListener('pointerdown',(e)=>{ e.preventDefault(); showScreen('other'); });
 document.getElementById('btnOtherBack').addEventListener('pointerdown',(e)=>{ e.preventDefault(); showScreen('select'); });
 document.getElementById('btnOtherSettings').addEventListener('pointerdown',(e)=>{ e.preventDefault(); applySettingsLang(); showScreen('settings'); });
 document.getElementById('btnOtherSurvey').addEventListener('pointerdown',(e)=>{ e.preventDefault(); renderSurvey(); showScreen('survey'); });
-document.getElementById('btnOtherPrivacy').addEventListener('pointerdown',(e)=>{ e.preventDefault(); window.open('https://airis-games.com/privacy-policy','_blank','noopener'); });
+document.getElementById('btnOtherPrivacy').addEventListener('pointerdown',(e)=>{ e.preventDefault(); window.open('https://mrshu1mura0829-png.github.io/airis-games-legal/privacy.html','_blank','noopener'); });
 document.getElementById('btnSettingsBack').addEventListener('pointerdown',(e)=>{ e.preventDefault(); applyLang(); showScreen('other'); });
 document.getElementById('btnMoreGames').addEventListener('pointerdown',(e)=>{ e.preventDefault(); renderMoreGames(); showScreen('more'); });
 document.getElementById('btnGachaShop').addEventListener('pointerdown',(e)=>{ e.preventDefault(); updateCoinUi(); showScreen('hub'); });
@@ -12003,7 +11972,6 @@ document.getElementById('btnExchange').addEventListener('pointerdown',(e)=>{
     try{ localStorage.setItem('cosmii_coins',String(COINS)); }catch(err){}
     saveMeteors(); updateCoinUi();
     coinToast('ミーティア1こ ゲット！');
-    if(window.GA){ window.GA.resource('Sink','coin',1000,'exchange','meteor'); window.GA.resource('Source','meteor',1,'exchange','coin1000'); }
   }else{
     coinToast('コインが たりないよ！（あと '+(1000-COINS)+'）');
   }
@@ -12040,7 +12008,7 @@ function openCharUnlock(c){
 }
 document.getElementById('unlockMeteor').addEventListener('pointerdown',function(e){ e.preventDefault();
   if(!_unlockTarget) return;
-  if(METEORS>=10){ METEORS-=10; saveMeteors(); JOURNEY_UNLOCK[_unlockTarget.id===1?'blue':'green']=true; saveJourney(); updateCoinUi(); document.getElementById('unlockModal').classList.add('hidden'); renderCharSelect(); coinToast(_unlockTarget.name+' を解放！'); if(window.GA) window.GA.resource('Sink','meteor',10,'unlock',_unlockTarget.name); }
+  if(METEORS>=10){ METEORS-=10; saveMeteors(); JOURNEY_UNLOCK[_unlockTarget.id===1?'blue':'green']=true; saveJourney(); updateCoinUi(); document.getElementById('unlockModal').classList.add('hidden'); renderCharSelect(); coinToast(_unlockTarget.name+' を解放！'); }
 });
 document.getElementById('unlockClose').addEventListener('pointerdown',function(e){ e.preventDefault(); document.getElementById('unlockModal').classList.add('hidden'); });
 function journeyOnResult(ok, ch){
@@ -12119,51 +12087,6 @@ function loadGA4(){
   gtag('js',new Date()); gtag('config','G-XXXXXXXXXX');
 }
 
-var _gaLoaded=false;
-function loadGameAnalytics(){
-  if(_gaLoaded) return;
-  _gaLoaded=true;
-  const GA_GAME_KEY='1271eaa78ed2956b898d9eb0a6e3ad44';
-  const GA_SECRET_KEY='9cb5804ce91188215551dbedbdfc1386c3622f7f';
-  const GA_BUILD='v46';
-  const s=document.createElement('script');
-  s.async=true;
-  s.src='https://download.gameanalytics.com/js/GameAnalytics-4.6.4.min.js';
-  s.onload=function(){
-    try{
-      gameanalytics.GameAnalytics.configureBuild(GA_BUILD);
-      gameanalytics.GameAnalytics.configureAvailableResourceCurrencies(['coin','meteor','baicoin']);
-      gameanalytics.GameAnalytics.configureAvailableResourceItemTypes(['gameplay','gacha','shop','exchange','unlock','bonus']);
-      gameanalytics.GameAnalytics.initialize(GA_GAME_KEY, GA_SECRET_KEY);
-      window.__gaReady=true;
-    }catch(e){}
-  };
-  document.head.appendChild(s);
-}
-
-window.GA={
-  design:function(id,value){
-    try{ if(!window.__gaReady) return;
-      if(typeof value==='number') gameanalytics.GameAnalytics.addDesignEvent(id,value);
-      else gameanalytics.GameAnalytics.addDesignEvent(id);
-    }catch(e){}
-  },
-  progression:function(status,p1,p2,p3,score){
-    try{ if(!window.__gaReady) return;
-      var st=gameanalytics.EGAProgressionStatus[status];
-      if(typeof score==='number') gameanalytics.GameAnalytics.addProgressionEvent(st,p1||'',p2||'',p3||'',score);
-      else gameanalytics.GameAnalytics.addProgressionEvent(st,p1||'',p2||'',p3||'');
-    }catch(e){}
-  },
-  resource:function(flow,currency,amount,itemType,itemId){
-    try{ if(!window.__gaReady) return;
-      if(!(amount>0)) return;
-      var f=gameanalytics.EGAResourceFlowType[flow];
-      gameanalytics.GameAnalytics.addResourceEvent(f,currency,amount,itemType,itemId);
-    }catch(e){}
-  }
-};
-
 function showAdMobBanner(){
   if(window.webkit&&window.webkit.messageHandlers&&window.webkit.messageHandlers.admobBanner){
     window.webkit.messageHandlers.admobBanner.postMessage({action:'show'});
@@ -12191,7 +12114,6 @@ function loadAds(){
 window.attStatusCallback = function(status){
   if(status === 'authorized'){
     loadGA4();
-    loadGameAnalytics();
     loadAds();
   }
 
@@ -12201,7 +12123,7 @@ window.attStatusCallback = function(status){
   const bar=document.getElementById('consent-bar');
   document.getElementById('btnConsentAccept').addEventListener('click',()=>{
     bar.classList.add('hidden');
-    loadGA4(); loadGameAnalytics(); loadAds();
+    loadGA4(); loadAds();
   });
   document.getElementById('btnConsentDecline').addEventListener('click',()=>{
     bar.classList.add('hidden');
